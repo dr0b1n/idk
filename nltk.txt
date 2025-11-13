@@ -1,0 +1,150 @@
+import nltk
+import string
+import pandas as pd  # Used for the CSV loading comment
+
+# --- NLTK Resource Downloader ---
+# This is a crucial first step. NLTK needs these data models to work.
+def download_nltk_resources():
+    """Downloads all necessary NLTK data models."""
+    print("Downloading NLTK resources...")
+    
+    # Download resources directly
+    # 'quiet=True' suppresses the download log for a cleaner output
+    nltk.download('punkt', quiet=True)
+    nltk.download('stopwords', quiet=True)
+    nltk.download('wordnet', quiet=True)
+    nltk.download('omw-1.4', quiet=True)
+    nltk.download('averaged_perceptron_tagger', quiet=True)
+    nltk.download('maxent_ne_chunker', quiet=True)
+    nltk.download('words', quiet=True)
+    nltk.download('vader_lexicon', quiet=True)
+        
+    print("All NLTK resources are set to download.")
+
+# --- Main Program ---
+def main():
+    # --- 0. Placeholder Dataset ---
+    # This is our simple, in-memory dataset.
+    placeholder_data = [
+        "This is a fantastic product! I love the new features. It works perfectly.",
+        "The customer service was terrible. I am very unhappy with the company.",
+        "Dr. Smith from New York, N.Y. is visiting London next week for a conference.",
+        "It's an okay product, not bad, but not great either. It works as expected."
+    ]
+
+    # ---
+    # 🚨 HOW TO READ FROM A CSV (as requested)
+    #
+    # try:
+    #     # Use pandas (pip install pandas) for the easiest CSV reading
+    #     df = pd.read_csv('your_dataset.csv')
+    #     
+    #     # Assuming your text is in a column named 'review_text'
+    #     # This list will replace the placeholder_data
+    #     placeholder_data = df['review_text'].tolist()
+    #     print(f"Successfully loaded {len(placeholder_data)} documents from CSV.")
+    # except FileNotFoundError:
+    #     print("CSV file not found. Using placeholder data instead.")
+    # except KeyError:
+    #     print("Column 'review_text' not found in CSV. Using placeholder data.")
+    # ---
+
+    # We will process a few different samples for different tasks
+    text_positive = placeholder_data[0]
+    text_negative = placeholder_data[1]
+    text_ner = placeholder_data[2]
+
+    print(f"--- Processing Positive Text ---\n'{text_positive}'")
+
+    # --- 1. Tokenization (Sentence and Word) ---
+    print("\n## 1. Tokenization")
+    # Split text into sentences
+    sentences = nltk.sent_tokenize(text_positive)
+    print(f"Sentence Tokens: {sentences}")
+    
+    # Split the first sentence into words
+    words = nltk.word_tokenize(sentences[0])
+    print(f"Word Tokens (from first sentence): {words}")
+
+    # --- 2. Cleaning (Stop Words & Punctuation) ---
+    print("\n## 2. Cleaning (Stop Words & Punctuation)")
+    stop_words = set(nltk.corpus.stopwords.words('english'))
+    punctuation = set(string.punctuation)
+    
+    # We use the 'words' list from step 1
+    cleaned_words = [
+        word.lower() for word in words 
+        if word.lower() not in stop_words and word not in punctuation
+    ]
+    print(f"Original Words: {words}")
+    print(f"Cleaned Words: {cleaned_words}")
+
+    # --- 3. Stemming ---
+    print("\n## 3. Stemming (Porter)")
+    # Reduces words to their "stem" (e.g., "features" -> "featur")
+    stemmer = nltk.stem.PorterStemmer()
+    stemmed_words = [stemmer.stem(word) for word in cleaned_words]
+    print(f"Stemmed Words: {stemmed_words}")
+
+    # --- 4. Lemmatization ---
+    print("\n## 4. Lemmatization (WordNet)")
+    # Reduces words to their dictionary form (e.g., "features" -> "feature")
+    lemmatizer = nltk.stem.WordNetLemmatizer()
+    lemmatized_words = [lemmatizer.lemmatize(word) for word in cleaned_words]
+    print(f"Lemmatized Words: {lemmatized_words}")
+
+    # --- 5. Part-of-Speech (POS) Tagging ---
+    print("\n## 5. Part-of-Speech (POS) Tagging")
+    # Uses the original (uncleaned) 'words' for better accuracy
+    pos_tags = nltk.pos_tag(words)
+    print(f"POS Tags: {pos_tags}")
+    # (e.g., NN = Noun, JJ = Adjective, VB = Verb, . = Punctuation)
+
+    # --- 6. Frequency Distribution ---
+    print("\n## 6. Frequency Distribution")
+    # Uses the 'lemmatized_words' for meaningful counts
+    fdist = nltk.FreqDist(lemmatized_words)
+    print(f"Most Common Words: {fdist.most_common(3)}")
+    print(f"Frequency of 'product': {fdist['product']}")
+    # You could also plot this: fdist.plot(10, title="Top 10 Words")
+
+    # --- 7. Named Entity Recognition (NER) ---
+    print("\n## 7. Named Entity Recognition (NER)")
+    print(f"--- Processing NER Text ---\n'{text_ner}'")
+    ner_tokens = nltk.word_tokenize(text_ner)
+    ner_pos_tags = nltk.pos_tag(ner_tokens)
+    
+    # 'ne_chunk' finds entities after POS tagging
+    ner_tree = nltk.ne_chunk(ner_pos_tags)
+    print("NER Tree Structure (will open a window if uncommented):")
+    # ner_tree.draw() # Uncomment this to see the visual tree
+    
+    # Extracting entities from the tree
+    entities = []
+    for subtree in ner_tree:
+        if type(subtree) == nltk.tree.Tree:
+            entity_label = subtree.label()
+            entity_name = " ".join([word for word, tag in subtree.leaves()])
+            entities.append((entity_name, entity_label))
+            
+    print(f"Extracted Entities: {entities}")
+    # (GPE = Geo-Political Entity, PERSON = Person)
+
+    # --- 8. Sentiment Analysis (using VADER) ---
+    print("\n## 8. Sentiment Analysis (VADER)")
+    sia = nltk.sentiment.SentimentIntensityAnalyzer()
+
+    # Test on the negative text
+    print(f"--- Processing Negative Text ---\n'{text_negative}'")
+    neg_scores = sia.polarity_scores(text_negative)
+    print(f"Negative Scores: {neg_scores}")
+
+    # Test on the positive text
+    print(f"--- Processing Positive Text ---\n'{text_positive}'")
+    pos_scores = sia.polarity_scores(text_positive)
+    print(f"Positive Scores: {pos_scores}")
+    # 'compound' score is the most useful: > 0.05 is positive, < -0.05 is negative
+
+if __name__ == "__main__":
+    download_nltk_resources()
+    main()

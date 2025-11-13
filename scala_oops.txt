@@ -1,0 +1,120 @@
+// --- 1. Abstract Base Class ---
+// This is the blueprint for all employees.
+// It has common properties and one abstract method.
+abstract class Employee(val name: String, val employeeId: Int, val baseSalary: Double) {
+
+  // A concrete function (method) shared by all employees
+  def getProfile(): String = {
+    s"Profile: $name (ID: $employeeId)"
+  }
+  
+  // An abstract function. Subclasses MUST provide an implementation for this.
+  def calculateMonthlyPay(): Double
+}
+
+// --- 2. Traits (Behaviors) ---
+
+// A trait for employees who can code
+trait CanWriteCode {
+  // A function that this trait provides
+  def writeCode(task: String): String = {
+    s"Writing code for: $task"
+  }
+}
+
+// A trait for employees who manage
+trait CanManagePeople {
+  // This trait requires any class mixing it in to define this value
+  val teamSize: Int 
+  
+  def conductMeeting(): String = {
+    s"Holding a meeting with $teamSize team members."
+  }
+  
+  def approveVacation(name: String): String = {
+    s"Approving vacation for $name."
+  }
+}
+
+// --- 3. Concrete Classes (Inheritance) ---
+
+// A Developer inherits from Employee and mixes in CanWriteCode
+class Developer(name: String, id: Int, salary: Double) 
+  extends Employee(name, id, salary) with CanWriteCode {
+  
+  // Must implement the abstract method from Employee
+  override def calculateMonthlyPay(): Double = {
+    val bonus = 1000.0 // Developer bonus
+    (baseSalary / 12) + bonus
+  }
+  
+  // We can also override trait methods
+  override def writeCode(task: String): String = {
+    s"Developer $name is expertly writing code for: $task"
+  }
+}
+
+// A Manager inherits from Employee and mixes in CanManagePeople
+class Manager(name: String, id: Int, salary: Double, override val teamSize: Int)
+  extends Employee(name, id, salary) with CanManagePeople {
+  
+  // Must implement the abstract method from Employee
+  override def calculateMonthlyPay(): Double = {
+    val bonus = teamSize * 150.0 // Bonus based on team size
+    (baseSalary / 12) + bonus
+  }
+}
+
+// A TechLead inherits from Employee and mixes in BOTH traits
+class TechLead(name: String, id: Int, salary: Double, override val teamSize: Int)
+  extends Employee(name, id, salary) with CanWriteCode with CanManagePeople {
+
+  // Must implement the abstract method from Employee
+  override def calculateMonthlyPay(): Double = {
+    val leadBonus = 2500.0
+    (baseSalary / 12) + leadBonus
+  }
+  
+  // This class gets functions from ALL its parents and traits
+  def doTechLeadThings(): Unit = {
+    println(writeCode("Architecting new system"))
+    println(conductMeeting())
+  }
+}
+
+// --- 4. Main Object to Run the Demo ---
+object CompanyDemo {
+  def main(args: Array[String]): Unit = {
+    val dev = new Developer("Alice Smith", 101, 120000)
+    val mgr = new Manager("Bob Johnson", 201, 130000, 8)
+    val lead = new TechLead("Charlie Brown", 301, 150000, 5)
+
+    // --- Polymorphism ---
+    // We can store all types in a list of the base class 'Employee'
+    val employees: List[Employee] = List(dev, mgr, lead)
+
+    println("--- 💵 Employee Payroll ---")
+    employees.foreach { emp =>
+      println(emp.getProfile())
+      // The correct calculateMonthlyPay() is called for each object type
+      println(f"Monthly Pay: $$${emp.calculateMonthlyPay()}%.2f")
+      println("---")
+    }
+
+    // --- Calling Specific Trait Functions ---
+    println("\n--- 🚀 Specific Job Functions ---")
+    
+    // Developer functions
+    println(dev.getProfile())
+    println(dev.writeCode("Fixing bug #123"))
+
+    // Manager functions
+    println(mgr.getProfile())
+    println(mgr.conductMeeting())
+    println(mgr.approveVacation("Alice"))
+
+    // TechLead has functions from both traits
+    println(lead.getProfile())
+    lead.doTechLeadThings()
+  }
+}

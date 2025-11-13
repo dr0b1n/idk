@@ -1,0 +1,6 @@
+libraryDependencies ++= Seq(
+  // Breeze for numerical computation
+  "org.scalanlp" %% "breeze" % "2.1.0", 
+  // Plotly.Scala for visualization
+  "com.cibo" %% "plotly-scala" % "0.8.1"
+)

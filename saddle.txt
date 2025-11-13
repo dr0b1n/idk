@@ -1,0 +1,82 @@
+import org.saddle._
+import org.saddle.time._
+import org.saddle.scalar.NA
+import vegas._
+import vegas.spec.Spec.MarkEnums.Line
+import vegas.spec.Spec.TypeEnums._
+
+// Placeholder Case Class for generating minimal in-memory data
+case class DataPoint(date: Long, category: String, value: Double)
+
+object PlaceholderDataDemo {
+  def main(args: Array[String]): Unit = {
+    // --- 1. Load Data (Placeholder) ---
+
+    // 🍎 IN A REAL PROJECT: You would use Saddle's CSV parser here, e.g.:
+    // val frame: Frame[String, String, Double] = Csv.read[String]("path/to/data.csv")
+    
+    // Create minimal, in-memory placeholder data for demonstration
+    val timeIndex = DateTimeIndex.fromDateTimes((0 until 5).map(i => datetime(2025, 1, 1 + i)))
+    val rawData = Seq(
+      DataPoint(timeIndex.toVec(0), "A", 10.5),
+      DataPoint(timeIndex.toVec(1), "B", 20.0),
+      DataPoint(timeIndex.toVec(2), "A", 12.0),
+      DataPoint(timeIndex.toVec(3), "C", 5.0),
+      DataPoint(timeIndex.toVec(4), "A", 11.5)
+    )
+
+    // Convert raw data to a Saddle Frame
+    val frame: Frame[Long, String, Any] = Frame(
+      "Date"     -> Series(rawData.map(_.date).toVector: _*),
+      "Category" -> Series(rawData.map(_.category).toVector: _*),
+      "Value"    -> Series(rawData.map(_.value).toVector: _*)
+    ).setRowIndex(Index(rawData.map(_.date).toVector: _*))
+    
+    println("--- Loaded Placeholder Data ---")
+    println(frame.slice(0, 3).rfilter(x => !NA.isNA(x.value)).toString)
+    println("...")
+
+    // --- 2. Data Manipulation with Saddle ---
+
+    // 🎯 Filter for Category "A"
+    val categoryFilter: Series[Long, Boolean] = frame.firstCol[String]
+      .filter(_ == "A")
+      .mapValues(v => v.isDefined && v.get == "A")
+
+    val filteredFrame: Frame[Long, String, Any] = frame.rfilter(categoryFilter)
+
+    println("\n--- Filtered Data (Category A) ---")
+    println(filteredFrame.rfilter(x => !NA.isNA(x.value)).toString)
+
+    // 📊 Calculate Average Value
+    val values: Series[Long, Double] = filteredFrame
+      .firstCol[Double](2) // Get the 'Value' column (index 2)
+      .mapValues(_.getOrElse(0.0))
+
+    val avgValue: Double = values.mean.getOrElse(0.0)
+
+    println(f"\nAverage Value for Category A: ${avgValue}%.2f")
+
+    // --- 3. Visualization with Vegas ---
+
+    // Prepare data for Vegas (using the filtered subset)
+    val chartData = rawData.filter(_.category == "A").map { d =>
+      Map("date" -> d.date, "value" -> d.value)
+    }
+
+    // 📈 Create the Vegas plot
+    val valueTrend = Vegas("Category A Trend")
+      .withData(chartData)
+      .encodeX("date", T)    // Temporal type for the date
+      .encodeY("value", Q)   // Quantitative type for the value
+      .mark(Line)
+      .title("Value Trend for Filtered Category")
+
+    println("\n--- Vegas Chart Specification (JSON) ---")
+    // This will print the JSON spec that a renderer would use to display the chart.
+    println(valueTrend.toJson.spaces2.take(300) + "...")
+
+    // 🖼️ IN A NOTEBOOK: Just calling `valueTrend` would display the chart.
+    // IN A STANDALONE APP: You need a renderer library to save it as an HTML/PNG file.
+  }
+}
