@@ -1,6 +1,0 @@
-libraryDependencies ++= Seq(
-  // Saddle for data manipulation
-  "org.saddle-framework" %% "saddle-core" % "1.6.0",
-  // Vegas for visualization (using a stable version)
-  "org.vegas-viz" %% "vegas" % "0.3.11"
-)
